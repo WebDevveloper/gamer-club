@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    // Цель и модули
+    "target": "ES2020",
+    "module": "ESNext",
+
+    // Библиотеки — чтобы были Promise, DOM, JSX и т. д.
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+
+    // JSX под React 18+
+    "jsx": "react-jsx",
+
+    // Разрешение модулей, импорт .ts(x), JSON
+    "moduleResolution": "node",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+
+    // Совместимость ESM/CommonJS
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Строгий режим
+    "strict": true,
+    "skipLibCheck": true,
+
+    // Не эмитировать файлы — Vite сам соберёт
+    "noEmit": true,
+    "isolatedModules": true,
+
+    // Где искать декларации типов
+    "typeRoots": ["./node_modules/@types", "./types"],
+    "types": ["react", "react-dom", "node", "express"]
+  },
+  "include": ["src", "types"]
+}
