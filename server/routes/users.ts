@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { RowDataPacket, OkPacket } from 'mysql2';
 import { db } from '../config/db';
-import { authenticate } from '../middleware/auth';
+import authenticate from '../middleware/auth';
 
 interface AuthRequest extends Request {
   userId?: string;

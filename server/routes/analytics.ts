@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { RowDataPacket } from 'mysql2';
 import { db } from '../config/db';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import authenticate, {AuthRequest } from '../middleware/auth';
 
 const router = Router();
 

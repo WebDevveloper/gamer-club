@@ -31,5 +31,5 @@
     "typeRoots": ["./node_modules/@types", "./types"],
     "types": ["react", "react-dom", "node", "express"]
   },
-  "include": ["src", "types"]
+  "include": ["src", "types", "server/**/*.ts", "types/**/*.d.ts"]
 }

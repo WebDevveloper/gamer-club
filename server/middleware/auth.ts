@@ -1,31 +1,38 @@
-import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
+import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
 
-export interface AuthRequest extends Request {
-  user?: { userId: number; role: string };
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET must be set');
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || "change_this_secret";
+export interface AuthRequest extends Request {
+  user?: {
+    userId: number;
+    role: 'user' | 'admin';
+  };
+}
 
-export function authenticate(
+export default function authenticate(
   req: AuthRequest,
   res: Response,
   next: NextFunction
 ): void {
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) {
-    res.status(401).json({ success: false, message: "Unauthorized" });
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    res.status(401).json({ success: false, message: 'No token provided' });
     return;
   }
-  const token = authHeader.split(" ")[1];
+
+  const token = authHeader.slice(7);
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as {
+    const payload = jwt.verify(token, process.env.JWT_SECRET!) as {
       userId: number;
-      role: string;
+      role: 'user' | 'admin';
     };
-    req.user = payload;
+    req.user = { userId: payload.userId, role: payload.role };
     next();
-  } catch {
-    res.status(401).json({ success: false, message: "Invalid token" });
+  } catch (err) {
+    console.error('JWT verification failed:', err);
+    res.status(401).json({ success: false, message: 'Invalid token' });
   }
 }

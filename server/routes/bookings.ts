@@ -1,129 +1,114 @@
-import { Router, Request, Response } from 'express';
-import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { Router, Response } from 'express';
+import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { db } from '../config/db';
-import { authenticate } from '../middleware/auth';
-
-interface AuthRequest extends Request {
-  userId?: number;
-  userRole?: string;
-}
+import authenticate, { AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
-// GET /api/bookings
-router.get('/', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const userId = req.userId!;
-    const role = req.userRole!;
+// GET /api/bookings — list this user’s bookings
+router.get(
+  '/',
+  authenticate,
+  async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.userId;
+    const role   = req.user!.role;
+
     let sql = `
-      SELECT b.id, b.user_id AS userId, u.name AS userName,
-             b.computer_id AS computerId, c.name AS computerName,
-             b.start_time AS startTime, b.end_time AS endTime,
-             b.status, b.total_price AS totalPrice
+      SELECT 
+        b.id,
+        b.user_id    AS userId,
+        b.computer_id AS computerId,
+        b.start_time AS startTime,
+        b.end_time   AS endTime,
+        b.status,
+        b.total_price AS totalPrice,
+        c.name  AS computerName,
+        c.image AS computerImage
       FROM bookings b
-      JOIN users u ON b.user_id = u.id
       JOIN computers c ON b.computer_id = c.id
     `;
-    const params: (number | string)[] = [];
+    const params: any[] = [];
     if (role !== 'admin') {
       sql += ' WHERE b.user_id = ?';
       params.push(userId);
     }
+
     const [rows] = await db.query<RowDataPacket[]>(sql, params);
     res.json({ success: true, data: rows });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: 'Server error' });
   }
-});
+);
 
-// POST /api/bookings
-router.post('/', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const userId = req.userId!;
-    const { computerId, startTime, endTime } = req.body as {
-      computerId: number;
-      startTime: string;
-      endTime: string;
-    };
+// POST /api/bookings — create & immediately “confirm” a booking
+router.post(
+  '/',
+  authenticate,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const userId     = req.user!.userId;
+      const { computerId, startTime, endTime } = req.body as {
+        computerId: number;
+        startTime: string;
+        endTime: string;
+      };
 
-    if (!computerId || !startTime || !endTime) {
-      res.status(400).json({ success: false, message: 'Missing fields' });
-      return;
-    }
+      const start = new Date(startTime);
+      const end   = new Date(endTime);
+      if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
+        res.status(400).json({ success: false, message: 'Invalid dates' });
+        return;
+      }
 
-    const [compRows] = await db.query<RowDataPacket[]>(
-      'SELECT hourly_rate FROM computers WHERE id = ?',
-      [computerId]
-    );
-    if (compRows.length === 0) {
-      res.status(404).json({ success: false, message: 'Computer not found' });
-      return;
-    }
-    const hourlyRate = compRows[0].hourly_rate;
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    if (end <= start) {
-      res.status(400).json({ success: false, message: 'End time must be after start time' });
-      return;
-    }
-    const hours = (end.getTime() - start.getTime()) / 36e5;
-    const totalPrice = parseFloat((hourlyRate * hours).toFixed(2));
-
-    const [result] = await db.query<ResultSetHeader>(
-      `INSERT INTO bookings 
-         (user_id, computer_id, start_time, end_time, total_price)
-       VALUES (?, ?, ?, ?, ?)`,
-      [userId, computerId, startTime, endTime, totalPrice]
-    );
-    const bookingId = result.insertId;
-
-    const [rows] = await db.query<RowDataPacket[]>(
-      `SELECT b.id, b.user_id AS userId, u.name AS userName,
-              b.computer_id AS computerId, c.name AS computerName,
-              b.start_time AS startTime, b.end_time AS endTime,
-              b.status, b.total_price AS totalPrice
-       FROM bookings b
-       JOIN users u ON b.user_id = u.id
-       JOIN computers c ON b.computer_id = c.id
-       WHERE b.id = ?`,
-      [bookingId]
-    );
-    res.status(201).json({ success: true, data: rows[0] });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-// DELETE /api/bookings/:id
-router.delete('/:id', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const bookingId = Number(req.params.id);
-    const userId = req.userId!;
-    const role = req.userRole!;
-
-    if (role !== 'admin') {
-      const [ownerRows] = await db.query<RowDataPacket[]>(
-        'SELECT user_id FROM bookings WHERE id = ?', 
-        [bookingId]
+      // fetch rate & availability
+      const [compRows] = await db.query<RowDataPacket[]>(
+        'SELECT status, hourly_rate FROM computers WHERE id = ?',
+        [computerId]
       );
-      if (!ownerRows.length) {
-        res.status(404).json({ success: false, message: 'Booking not found' });
+      const comp = compRows[0];
+      if (!comp) {
+        res.status(404).json({ success: false, message: 'Computer not found' });
         return;
       }
-      if (ownerRows[0].user_id !== userId) {
-        res.status(403).json({ success: false, message: 'Forbidden' });
+      if (comp.status !== 'available') {
+        res.status(400).json({ success: false, message: 'Not available' });
         return;
       }
-    }
 
-    await db.query('UPDATE bookings SET status = ? WHERE id = ?', ['cancelled', bookingId]);
-    res.json({ success: true });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: 'Server error' });
+      // calculate price
+      const ms     = end.getTime() - start.getTime();
+      const hours  = ms / (1000 * 60 * 60);
+      const price  = +(hours * comp.hourly_rate).toFixed(2);
+
+      // insert booking
+      const [r] = await db.query<ResultSetHeader>(
+        `INSERT INTO bookings
+           (user_id, computer_id, start_time, end_time, total_price)
+         VALUES (?,       ?,           ?,          ?,         ?)`,
+        [userId, computerId, start, end, price]
+      );
+
+      // mark computer booked
+      await db.query(
+        'UPDATE computers SET status = ? WHERE id = ?',
+        ['booked', computerId]
+      );
+
+      res.json({
+        success: true,
+        data: {
+          id:          r.insertId,
+          userId,
+          computerId,
+          startTime:   start.toISOString(),
+          endTime:     end.toISOString(),
+          totalPrice:  price,
+          status:      'confirmed',
+        }
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ success: false, message: 'Server error' });
+    }
   }
-});
+);
 
 export default router;

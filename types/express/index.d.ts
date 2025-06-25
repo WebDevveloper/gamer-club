@@ -1,8 +1,12 @@
-import { Request } from 'express';
+import express from 'express';
 
-declare module 'express-serve-static-core' {
-  interface Request {
-    userId?: string;
-    userRole?: 'user' | 'admin';
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        userId: number;
+        role: 'user' | 'admin';
+      };
+    }
   }
 }

@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction  } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { db } from "../config/db"          // ваш mysql2-пул с promise
-import { authenticate, AuthRequest } from "../middleware/auth";
+import authenticate, { AuthRequest } from "../middleware/auth";
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "replace_this_secret";

@@ -17,58 +17,42 @@ import { useComputerStore } from '../../stores/computerStore';
 import type { Computer } from '../../types';
 import { statusLabels } from '../../utils/statusMap';
 
+const statusColorMap: Record<Computer['status'], NonNullable<ChipProps['color']>> = {
+  available: 'success',
+  booked: 'warning',
+  maintenance: 'danger'
+};
+
+const statusIconMap: Record<Computer['status'], string> = {
+  available: 'lucide:check-circle',
+  booked: 'lucide:clock',
+  maintenance: 'lucide:tool'
+};
+
+const typeIconMap: Record<Computer['type'], string> = {
+  gaming: 'lucide:gamepad-2',
+  premium: 'lucide:star',
+  standard: 'lucide:monitor'
+};
+
 const ComputersPage: React.FC = () => {
   const { computers, isLoading, fetchComputers } = useComputerStore();
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [type, setType] = React.useState<string>('all');
+  const [typeFilter, setTypeFilter] = React.useState<'all' | 'gaming' | 'standard' | 'premium'>('all');
   const navigate = useNavigate();
 
   React.useEffect(() => {
     fetchComputers();
   }, [fetchComputers]);
 
-  const filteredComputers = React.useMemo(() => {
-    return computers.filter(computer => {
-      const matchesSearch = 
-        computer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        computer.specs.cpu.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        computer.specs.gpu.toLowerCase().includes(searchQuery.toLowerCase());
-  
-      const matchesType = type === 'all' || computer.type === type;
-      return matchesSearch && matchesType;
-    });
-  }, [computers, searchQuery, type]);
-
-  const handleBookComputer = (computerId: string) => {
-    navigate(`/booking/${computerId}`);
-  };
-
-  const getStatusColor = (status: string): NonNullable<ChipProps['color']> => {
-    switch (status) {
-      case 'available':   return 'success';
-      case 'booked':      return 'warning';
-      case 'maintenance': return 'danger';
-      default:            return 'default';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'available':   return 'lucide:check-circle';
-      case 'booked':      return 'lucide:clock';
-      case 'maintenance': return 'lucide:tool';
-      default:            return 'lucide:help-circle';
-    }
-  };
-
-  const getComputerTypeIcon = (type: string) => {
-    switch (type) {
-      case 'gaming':   return 'lucide:gamepad-2';
-      case 'premium':  return 'lucide:star';
-      case 'standard': return 'lucide:monitor';
-      default:         return 'lucide:monitor';
-    }
-  };
+  const filtered = React.useMemo(() => computers.filter(c => {
+    const matchesSearch =
+      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.specs.cpu.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.specs.gpu.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = typeFilter === 'all' || c.type === typeFilter;
+    return matchesSearch && matchesType;
+  }), [computers, searchQuery, typeFilter]);
 
   if (isLoading) {
     return (
@@ -80,13 +64,11 @@ const ComputersPage: React.FC = () => {
 
   return (
     <div className="page-container">
-      <div className="mb-6">
+      <header className="mb-6">
         <h1 className="text-2xl font-bold">Доступные компьютеры</h1>
-        <p className="text-default-500">
-          Просмотр и бронирование компьютеров для вашей сессии
-        </p>
-      </div>
-      
+        <p className="text-default-500">Просмотр и бронирование компьютеров для вашей сессии</p>
+      </header>
+
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <Input
           placeholder="Поиск компьютеров..."
@@ -95,11 +77,13 @@ const ComputersPage: React.FC = () => {
           startContent={<Icon icon="lucide:search" />}
           className="md:max-w-xs"
         />
-        
         <Select
           placeholder="Фильтр по типу"
-          selectedKeys={[type]}
-          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setType(e.target.value)}
+          selectedKeys={new Set([typeFilter])}
+          onSelectionChange={keys => {
+            const val = Array.from(keys)[0] as 'all' | 'gaming' | 'standard' | 'premium';
+            setTypeFilter(val);
+          }}
           className="md:max-w-xs"
           startContent={<Icon icon="lucide:filter" />}
         >
@@ -109,34 +93,31 @@ const ComputersPage: React.FC = () => {
           <SelectItem key="standard">Стандарт</SelectItem>
         </Select>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredComputers.map(c => (
+        {filtered.map(c => (
           <Card key={c.id} className="w-full">
             <CardBody className="relative p-0">
-              <img
-                src={c.image}
-                alt={c.name}
-                className="w-full h-48 object-cover"
-              />
+              <img src={c.image || '/placeholder.png'} alt={c.name} className="w-full h-48 object-cover" />
               <div className="absolute top-2 right-2">
                 <Chip
-                  color={getStatusColor(c.status)}
+                  color={statusColorMap[c.status]}
                   variant="flat"
                   size="sm"
-                  startContent={<Icon icon={getStatusIcon(c.status)} />}
+                  startContent={<Icon icon={statusIconMap[c.status]} />}
                 >
-                  {c.type === 'gaming'   ? 'Игровой'
-                    : c.type === 'premium' ? 'Премиум'
-                    : 'Стандарт'}
                   {statusLabels[c.status]}
                 </Chip>
               </div>
             </CardBody>
-            
+
             <CardBody className="p-4">
-              <h3 className="text-lg font-semibold">{c.name}</h3>
-              <div className="mt-2 space-y-1 text-sm">
+              <h3 className="text-lg font-semibold mb-2">{c.name}</h3>
+              <div className="flex items-center gap-2 mb-4">
+                <Icon icon={typeIconMap[c.type]} />
+                <span className="uppercase text-xs font-medium">{c.type}</span>
+              </div>
+              <div className="space-y-1 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="text-default-500">CPU:</span> {c.specs.cpu}
                 </div>
@@ -148,14 +129,12 @@ const ComputersPage: React.FC = () => {
                 </div>
               </div>
             </CardBody>
-            
+
             <CardFooter className="flex justify-between items-center p-4">
-              <div className="text-lg font-semibold">
-                ₽{c.hourlyRate}/ч
-              </div>
+              <div className="text-lg font-semibold">₽{c.hourlyRate.toFixed(2)}/ч</div>
               <Button
                 color="primary"
-                onPress={() => handleBookComputer(c.id)}
+                onPress={() => navigate(`/booking/${c.id}`)}
                 isDisabled={c.status !== 'available'}
                 startContent={<Icon icon="lucide:calendar-plus" />}
               >
