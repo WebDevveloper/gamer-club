@@ -1,56 +1,62 @@
-import { Router, Response } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { db } from '../config/db';
 import authenticate, { AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
-// GET /api/bookings — list this user’s bookings
+// GET /api/bookings — список броней (только свои для пользователя, все — для админа)
 router.get(
   '/',
   authenticate,
-  async (req: AuthRequest, res: Response) => {
-    const userId = req.user!.userId;
-    const role   = req.user!.role;
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.user!.userId;
+      const role   = req.user!.role;
 
-    let sql = `
-      SELECT 
-        b.id,
-        b.user_id    AS userId,
-        b.computer_id AS computerId,
-        b.start_time AS startTime,
-        b.end_time   AS endTime,
-        b.status,
-        b.total_price AS totalPrice,
-        c.name  AS computerName,
-        c.image AS computerImage
-      FROM bookings b
-      JOIN computers c ON b.computer_id = c.id
-    `;
-    const params: any[] = [];
-    if (role !== 'admin') {
-      sql += ' WHERE b.user_id = ?';
-      params.push(userId);
+      let sql = `
+        SELECT 
+          b.id,
+          b.user_id     AS userId,
+          b.computer_id AS computerId,
+          b.start_time  AS startTime,
+          b.end_time    AS endTime,
+          b.status,
+          b.total_price AS totalPrice,
+          c.name        AS computerName,
+          c.image       AS computerImage
+        FROM bookings b
+        JOIN computers c ON b.computer_id = c.id
+      `;
+      const params: any[] = [];
+      if (role !== 'admin') {
+        sql  += ' WHERE b.user_id = ?';
+        params.push(userId);
+      }
+
+      const [rows] = await db.query<RowDataPacket[]>(sql, params);
+      res.json({ success: true, data: rows });
+      return;
+    } catch (err) {
+      next(err);
     }
-
-    const [rows] = await db.query<RowDataPacket[]>(sql, params);
-    res.json({ success: true, data: rows });
   }
 );
 
-// POST /api/bookings — create & immediately “confirm” a booking
+// POST /api/bookings — создать новую бронь и сразу подтвердить её
 router.post(
   '/',
   authenticate,
-  async (req: AuthRequest, res: Response) => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId     = req.user!.userId;
+      const userId = req.user!.userId;
       const { computerId, startTime, endTime } = req.body as {
         computerId: number;
         startTime: string;
         endTime: string;
       };
 
+      // Проверка корректности дат
       const start = new Date(startTime);
       const end   = new Date(endTime);
       if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
@@ -58,7 +64,7 @@ router.post(
         return;
       }
 
-      // fetch rate & availability
+      // Проверяем доступность и ставку компьютера
       const [compRows] = await db.query<RowDataPacket[]>(
         'SELECT status, hourly_rate FROM computers WHERE id = ?',
         [computerId]
@@ -73,29 +79,30 @@ router.post(
         return;
       }
 
-      // calculate price
-      const ms     = end.getTime() - start.getTime();
-      const hours  = ms / (1000 * 60 * 60);
-      const price  = +(hours * comp.hourly_rate).toFixed(2);
+      // Вычисляем цену
+      const ms    = end.getTime() - start.getTime();
+      const hours = ms / (1000 * 60 * 60);
+      const price = +(hours * comp.hourly_rate).toFixed(2);
 
-      // insert booking
-      const [r] = await db.query<ResultSetHeader>(
+      // Вставляем бронь
+      const [insertResult] = await db.query<ResultSetHeader>(
         `INSERT INTO bookings
            (user_id, computer_id, start_time, end_time, total_price)
          VALUES (?,       ?,           ?,          ?,         ?)`,
         [userId, computerId, start, end, price]
       );
 
-      // mark computer booked
+      // Обновляем статус компьютера
       await db.query(
         'UPDATE computers SET status = ? WHERE id = ?',
         ['booked', computerId]
       );
 
+      // Возвращаем созданный объект
       res.json({
         success: true,
         data: {
-          id:          r.insertId,
+          id:          insertResult.insertId,
           userId,
           computerId,
           startTime:   start.toISOString(),
@@ -104,9 +111,9 @@ router.post(
           status:      'confirmed',
         }
       });
+      return;
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ success: false, message: 'Server error' });
+      next(err);
     }
   }
 );

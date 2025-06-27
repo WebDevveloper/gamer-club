@@ -2,17 +2,15 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 
-// инициализируем .env
 dotenv.config();
 
-import authRouter from "./routes/auth.js";
-import usersRouter from "./routes/users.js";
-import computersRouter from "./routes/computers.js";
-import bookingsRouter from "./routes/bookings.js";
-import analyticsRouter from "./routes/analytics.js";
+import authRouter from "./routes/auth";
+import usersRouter from "./routes/users";
+import computersRouter from "./routes/computers";
+import bookingsRouter from "./routes/bookings";
+import analyticsRouter from "./routes/analytics";
 
 const app = express();
-
 app.use(cors());
 app.use(express.json());
 

@@ -1,159 +1,153 @@
-import type { ApiResponse } from '../types/index.ts';
+import type { ApiResponse } from '../types/index';
 
+// Базовый URL для всех запросов к серверу
 const API_BASE_URL = '/api';
 
-// Helper to get auth token from storage
-const getToken = () => {
-  return localStorage.getItem('auth_token');
-};
+// Ключ, под которым в localStorage хранится JWT
+const STORAGE_KEY = 'token';
 
-// Generic fetch function with auth header
+// Получаем JWT из localStorage
+function getToken(): string | null {
+  return localStorage.getItem(STORAGE_KEY);
+}
+
+// Универсальная обёртка вокруг fetch, которая:
+// 1) Добавляет нужные заголовки (Content-Type, Authorization при наличии токена).
+// 2) Парсит JSON-ответ.
+// 3) Выбрасывает ошибку при статусе !== 2xx.
 async function fetchWithAuth<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
   const token = getToken();
-  
-  const headers = {
+
+  // Собираем заголовки
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...options.headers,
+    ...(options.headers as Record<string, string>), // приоритет полям из options
   };
-  
-  try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers,
-    });
-    
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.message || 'An error occurred');
-    }
-    
-    return data as ApiResponse<T>;
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(error.message);
-    }
-    throw new Error('An unknown error occurred');
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
+
+  // Выполняем запрос
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  // Парсим тело ответа как JSON
+  const data = await response.json();
+
+  // Если статус не ок, выбрасываем ошибку с тем сообщением, которое пришло с сервера
+  if (!response.ok) {
+    throw new Error(data.message || 'An error occurred');
+  }
+
+  return data as ApiResponse<T>;
 }
 
-// API client with typed methods
+// Экспортируем объект с методами для всех сущностей API
 export const apiClient = {
-  // Auth endpoints
+  // Аутентификация
   auth: {
-    register: async (userData: { email: string; password: string; name: string }) => {
-      return fetchWithAuth<{ user: any; token: string }>('/auth/register', {
+    register: (userData: { email: string; password: string; name: string }) =>
+      fetchWithAuth<{ user: any; token: string }>('/auth/register', {
         method: 'POST',
         body: JSON.stringify(userData),
-      });
-    },
-    
-    login: async (credentials: { email: string; password: string }) => {
-      return fetchWithAuth<{ user: any; token: string }>('/auth/login', {
+      }),
+
+    login: (credentials: { email: string; password: string }) =>
+      fetchWithAuth<{ user: any; token: string }>('/auth/login', {
         method: 'POST',
         body: JSON.stringify(credentials),
-      });
-    },
-    
-    getCurrentUser: async () => {
-      return fetchWithAuth<any>('/auth/me');
-    },
+      }),
+
+    getCurrentUser: () =>
+      fetchWithAuth<any>('/auth/me'),
   },
-  
-  // Users endpoints
+
+  // Пользователи
   users: {
-    getAll: async () => {
-      return fetchWithAuth<any[]>('/users');
-    },
-    
-    getById: async (id: string) => {
-      return fetchWithAuth<any>(`/users/${id}`);
-    },
-    
-    update: async (id: string, userData: any) => {
-      return fetchWithAuth<any>(`/users/${id}`, {
+    getAll: () =>
+      fetchWithAuth<any[]>('/users'),
+
+    getById: (id: string) =>
+      fetchWithAuth<any>(`/users/${id}`),
+
+    update: (id: string, userData: any) =>
+      fetchWithAuth<any>(`/users/${id}`, {
         method: 'PUT',
         body: JSON.stringify(userData),
-      });
-    },
-    
-    delete: async (id: string) => {
-      return fetchWithAuth<void>(`/users/${id}`, {
+      }),
+
+    delete: (id: string) =>
+      fetchWithAuth<void>(`/users/${id}`, {
         method: 'DELETE',
-      });
-    },
+      }),
+      changePassword: (id: string, payload: { currentPassword: string; newPassword: string }) =>
+      fetchWithAuth<void>(`/users/${id}/password`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
   },
-  
-  // Computers endpoints
+
+  // Компьютеры
   computers: {
-    getAll: async () => {
-      return fetchWithAuth<any[]>('/computers');
-    },
-    
-    getById: async (id: string) => {
-      return fetchWithAuth<any>(`/computers/${id}`);
-    },
-    
-    create: async (computerData: any) => {
-      return fetchWithAuth<any>('/computers', {
+    getAll: () =>
+      fetchWithAuth<any[]>('/computers'),
+
+    getById: (id: string) =>
+      fetchWithAuth<any>(`/computers/${id}`),
+
+    create: (computerData: any) =>
+      fetchWithAuth<any>('/computers', {
         method: 'POST',
         body: JSON.stringify(computerData),
-      });
-    },
-    
-    update: async (id: string, computerData: any) => {
-      return fetchWithAuth<any>(`/computers/${id}`, {
+      }),
+
+    update: (id: string, computerData: any) =>
+      fetchWithAuth<any>(`/computers/${id}`, {
         method: 'PUT',
         body: JSON.stringify(computerData),
-      });
-    },
-    
-    delete: async (id: string) => {
-      return fetchWithAuth<void>(`/computers/${id}`, {
+      }),
+
+    delete: (id: string) =>
+      fetchWithAuth<void>(`/computers/${id}`, {
         method: 'DELETE',
-      });
-    },
+      }),
   },
-  
-  // Bookings endpoints
+
+  // Бронирования
   bookings: {
-    getAll: async () => {
-      return fetchWithAuth<any[]>('/bookings');
-    },
-    
-    getById: async (id: string) => {
-      return fetchWithAuth<any>(`/bookings/${id}`);
-    },
-    
-    create: async (bookingData: any) => {
-      return fetchWithAuth<any>('/bookings', {
+    getAll: () =>
+      fetchWithAuth<any[]>('/bookings'),
+
+    getById: (id: string) =>
+      fetchWithAuth<any>(`/bookings/${id}`),
+
+    create: (bookingData: any) =>
+      fetchWithAuth<any>('/bookings', {
         method: 'POST',
         body: JSON.stringify(bookingData),
-      });
-    },
-    
-    update: async (id: string, bookingData: any) => {
-      return fetchWithAuth<any>(`/bookings/${id}`, {
+      }),
+
+    update: (id: string, bookingData: any) =>
+      fetchWithAuth<any>(`/bookings/${id}`, {
         method: 'PUT',
         body: JSON.stringify(bookingData),
-      });
-    },
-    
-    cancel: async (id: string) => {
-      return fetchWithAuth<any>(`/bookings/${id}/cancel`, {
+      }),
+
+    cancel: (id: string) =>
+      fetchWithAuth<any>(`/bookings/${id}/cancel`, {
         method: 'POST',
-      });
-    },
+      }),
   },
-  
-  // Analytics endpoints
+
+  // Аналитика
   analytics: {
-    getOverview: async () => {
-      return fetchWithAuth<any>('/analytics');
-    },
+    getOverview: () =>
+      fetchWithAuth<any>('/analytics'),
   },
 };

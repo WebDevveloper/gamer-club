@@ -1,61 +1,85 @@
 import React from 'react';
-import { Card, CardBody, CardHeader, Input, Button, Avatar, Divider, Tabs, Tab } from '@heroui/react';
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  Input,
+  Button,
+  Avatar,
+  Divider,
+  Tabs,
+  Tab,
+  Alert,
+} from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { useAuthStore } from '../../stores/authStore';
 
 const ProfilePage: React.FC = () => {
   const { user, updateProfile } = useAuthStore();
-  
+
+  // Локальные состояния для полей
   const [name, setName] = React.useState(user?.name || '');
-  const [email, setEmail] = React.useState(user?.email || '');
   const [phone, setPhone] = React.useState(user?.phone || '');
   const [isEditing, setIsEditing] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [isSaving, setIsSaving] = React.useState(false);
   const [error, setError] = React.useState('');
   const [success, setSuccess] = React.useState('');
-  
+
+  // При изменении user сбрасываем локальные поля
   React.useEffect(() => {
     if (user) {
       setName(user.name);
-      setEmail(user.email);
       setPhone(user.phone || '');
     }
   }, [user]);
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
-    setIsLoading(true);
-    
+    setIsSaving(true);
+
     try {
+      // updateProfile должен принимать объект с полями для изменения
       await updateProfile({ name, phone });
-      setSuccess('Профиль успешно обновлен');
+      setSuccess('Профиль успешно обновлён');
       setIsEditing(false);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Ошибка при обновлении пользователя');
+    } catch (err: any) {
+      setError(err.message || 'Ошибка при обновлении профиля');
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
-  
-  if (!user) {
-    return null;
+
+  if (!user) return null;
+
+  // Преобразуем createdAt в нужный формат
+  let registeredDate = '—';
+  try {
+    registeredDate = new Date(user.createdAt).toLocaleDateString();
+  } catch {
+    registeredDate = '—';
   }
-  
+
   return (
     <div className="page-container">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Профиль</h1>
-        <p className="text-default-500">Просмотр и изменения информации об аккаунте</p>
+        <p className="text-default-500">
+          Просмотр и редактирование данных вашего аккаунта
+        </p>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Левая колонка: аватар и роль */}
         <div className="md:col-span-1">
           <Card>
             <CardBody className="flex flex-col items-center p-6">
               <Avatar
-                src={user.avatar || `https://img.heroui.chat/image/avatar?w=200&h=200&u=${user.id}`}
+                src={
+                  user.avatar ||
+                  `https://img.heroui.chat/image/avatar?w=200&h=200&u=${user.id}`
+                }
                 className="w-24 h-24 mb-4"
                 isBordered
                 color="primary"
@@ -63,22 +87,32 @@ const ProfilePage: React.FC = () => {
               <h2 className="text-xl font-semibold">{user.name}</h2>
               <p className="text-default-500 mb-2">{user.email}</p>
               <div className="flex items-center gap-1 text-sm text-default-400">
-                <Icon icon="lucide:shield" className={user.role === 'admin' ? 'text-primary' : ''} />
-                <span className={user.role === 'admin' ? 'text-primary font-medium' : ''}>
+                <Icon
+                  icon="lucide:shield"
+                  className={user.role === 'admin' ? 'text-primary' : ''}
+                />
+                <span
+                  className={
+                    user.role === 'admin'
+                      ? 'text-primary font-medium'
+                      : ''
+                  }
+                >
                   {user.role === 'admin' ? 'Administrator' : 'User'}
                 </span>
               </div>
               <Divider className="my-4 w-full" />
               <div className="text-sm text-default-500">
-                <p>Зарегистрирован с: {new Date(user.createdAt).toLocaleDateString()}</p>
+                <p>Зарегистрирован с: {registeredDate}</p>
               </div>
             </CardBody>
           </Card>
         </div>
-        
+
+        {/* Правая колонка: табы с формой */}
         <div className="md:col-span-2">
           <Tabs aria-label="Profile options">
-            <Tab key="details" title="Информация об аккаунте">
+            <Tab key="details" title="Информация">
               <Card>
                 <CardHeader className="flex justify-between items-center">
                   <h3 className="text-lg font-semibold">Личная информация</h3>
@@ -87,26 +121,30 @@ const ProfilePage: React.FC = () => {
                       variant="flat"
                       color="primary"
                       startContent={<Icon icon="lucide:edit" />}
-                      onPress={() => setIsEditing(true)}
+                      onPress={() => {
+                        setError('');
+                        setSuccess('');
+                        setIsEditing(true);
+                      }}
                     >
                       Изменить
                     </Button>
                   )}
                 </CardHeader>
-                
-                <CardBody>
+
+                <CardBody className="p-6">
+                  {/* Уведомления */}
                   {success && (
-                    <div className="bg-success-50 text-success p-3 rounded-medium text-sm mb-4">
+                    <Alert variant="solid" color="success" className="mb-4">
                       {success}
-                    </div>
+                    </Alert>
                   )}
-                  
                   {error && (
-                    <div className="bg-danger-50 text-danger p-3 rounded-medium text-sm mb-4">
+                    <Alert variant="solid" color="danger" className="mb-4">
                       {error}
-                    </div>
+                    </Alert>
                   )}
-                  
+
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <Input
                       label="Имя"
@@ -114,35 +152,53 @@ const ProfilePage: React.FC = () => {
                       onValueChange={setName}
                       isReadOnly={!isEditing}
                       variant={isEditing ? 'bordered' : 'flat'}
-                      startContent={<Icon icon="lucide:user" className="text-default-400" />}
+                      startContent={
+                        <Icon
+                          icon="lucide:user"
+                          className="text-default-400"
+                        />
+                      }
                     />
-                    
+
                     <Input
-                      label="Почта"
-                      value={email}
+                      label="Email"
+                      value={user.email}
                       isReadOnly
                       variant="flat"
-                      startContent={<Icon icon="lucide:mail" className="text-default-400" />}
-                      description="Email cannot be changed"
+                      startContent={
+                        <Icon
+                          icon="lucide:mail"
+                          className="text-default-400"
+                        />
+                      }
+                      description="Email нельзя изменить"
                     />
-                    
+
                     <Input
-                      label="Номер телефона"
+                      label="Телефон"
                       value={phone}
                       onValueChange={setPhone}
                       isReadOnly={!isEditing}
                       variant={isEditing ? 'bordered' : 'flat'}
-                      startContent={<Icon icon="lucide:phone" className="text-default-400" />}
+                      startContent={
+                        <Icon
+                          icon="lucide:phone"
+                          className="text-default-400"
+                        />
+                      }
                     />
-                    
+
                     {isEditing && (
                       <div className="flex justify-end gap-2 mt-6">
                         <Button
                           variant="flat"
                           onPress={() => {
-                            setIsEditing(false);
+                            // Отмена: сброс полей к исходным
                             setName(user.name);
                             setPhone(user.phone || '');
+                            setError('');
+                            setSuccess('');
+                            setIsEditing(false);
                           }}
                         >
                           Отмена
@@ -150,9 +206,14 @@ const ProfilePage: React.FC = () => {
                         <Button
                           color="primary"
                           type="submit"
-                          isLoading={isLoading}
+                          isLoading={isSaving}
+                          isDisabled={
+                            isSaving ||
+                            (name === user.name &&
+                              phone === (user.phone || ''))
+                          }
                         >
-                          Сохранить изменения
+                          Сохранить
                         </Button>
                       </div>
                     )}
@@ -160,46 +221,54 @@ const ProfilePage: React.FC = () => {
                 </CardBody>
               </Card>
             </Tab>
+
             <Tab key="security" title="Безопасность">
               <Card>
                 <CardHeader>
                   <h3 className="text-lg font-semibold">Настройки безопасности</h3>
                 </CardHeader>
-                <CardBody>
-                  <div className="space-y-6">
-                    <div>
-                      <h4 className="text-medium font-medium mb-2">Сменить пароль</h4>
-                      <p className="text-default-500 text-sm mb-4">
-                        Обновите ваш пароль для сохранения безопасности аккаунта
-                      </p>
-                      <Button
-                        color="primary"
-                        variant="flat"
-                        startContent={<Icon icon="lucide:lock" />}
-                      >
-                        Изменить пароль
-                      </Button>
-                    </div>
-                    
-                    <Divider />
-                    
-                    <div>
-                      <h4 className="text-medium font-medium mb-2">Двух-факторная аутентификация</h4>
-                      <p className="text-default-500 text-sm mb-4">
-                        Обезопасьте ваш аккаунт
-                      </p>
-                      <Button
-                        color="primary"
-                        variant="flat"
-                        startContent={<Icon icon="lucide:shield" />}
-                        isDisabled
-                      >
-                        Включить 2FA
-                      </Button>
-                      <p className="text-xs text-default-400 mt-2">
-                        Будет добавлена в будущих обновлениях
-                      </p>
-                    </div>
+                <CardBody className="p-6 space-y-6">
+                  <div>
+                    <h4 className="text-medium font-medium mb-2">
+                      Сменить пароль
+                    </h4>
+                    <p className="text-default-500 text-sm mb-4">
+                      Обновите ваш пароль для безопасности аккаунта
+                    </p>
+                    <Button
+                      color="primary"
+                      variant="flat"
+                      startContent={<Icon icon="lucide:lock" />}
+                      onPress={() =>
+                        // перейти на отдельную страницу или открыть модалку
+                        // navigate('/change-password')
+                        alert('Функция смены пароля ещё не реализована')
+                      }
+                    >
+                      Изменить пароль
+                    </Button>
+                  </div>
+
+                  <Divider />
+
+                  <div>
+                    <h4 className="text-medium font-medium mb-2">
+                      Двухфакторная аутентификация
+                    </h4>
+                    <p className="text-default-500 text-sm mb-4">
+                      Защитите аккаунт дополнительно
+                    </p>
+                    <Button
+                      color="primary"
+                      variant="flat"
+                      startContent={<Icon icon="lucide:shield" />}
+                      isDisabled
+                    >
+                      Включить 2FA
+                    </Button>
+                    <p className="text-xs text-default-400 mt-2">
+                      Будет добавлена в будущих обновлениях
+                    </p>
                   </div>
                 </CardBody>
               </Card>

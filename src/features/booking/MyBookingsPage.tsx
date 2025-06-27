@@ -1,5 +1,5 @@
 import React from 'react';
-import { apiFetch } from '../../utils/api';
+import { apiClient } from '../../api/apiClient';
 import type { Booking } from '../../types';
 import { Spinner, Button, Card, CardBody, CardFooter } from '@heroui/react';
 import { Icon } from '@iconify/react';
@@ -14,7 +14,7 @@ const MyBookingsPage: React.FC = () => {
   React.useEffect(() => {
     (async () => {
       try {
-        const resp = await apiFetch<Booking[]>('/api/bookings');
+        const resp = await apiClient.bookings.getAll();
         setBookings(resp.data);
       } catch (err: any) {
         setError(err.message || 'Не удалось загрузить данные');

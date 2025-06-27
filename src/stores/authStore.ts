@@ -26,7 +26,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   error: null,
   
   initialize: async () => {
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem('token');
     
     if (!token) {
       set({ isInitialized: true });
@@ -48,7 +48,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
     } catch (error) {
       // Token is invalid, clear it
-      localStorage.removeItem('auth_token');
+      localStorage.removeItem('token');
       
       set({
         user: null,
@@ -69,7 +69,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { user, token } = response.data;
       
       // Store token in localStorage
-      localStorage.setItem('auth_token', token);
+      localStorage.setItem('token', token);
       
       set({
         user,
@@ -94,7 +94,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { user, token } = response.data;
       
       // Store token in localStorage
-      localStorage.setItem('auth_token', token);
+      localStorage.setItem('token', token);
       
       set({
         user,
@@ -113,7 +113,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   
   logout: () => {
     // Remove token from localStorage
-    localStorage.removeItem('auth_token');
+    localStorage.removeItem('token');
     
     set({
       user: null,

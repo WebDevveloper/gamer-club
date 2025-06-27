@@ -20,7 +20,7 @@ export default function authenticate(
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     res.status(401).json({ success: false, message: 'No token provided' });
-    return;
+    return
   }
 
   const token = authHeader.slice(7);
@@ -31,8 +31,8 @@ export default function authenticate(
     };
     req.user = { userId: payload.userId, role: payload.role };
     next();
-  } catch (err) {
-    console.error('JWT verification failed:', err);
+  } catch {
     res.status(401).json({ success: false, message: 'Invalid token' });
+    return
   }
 }

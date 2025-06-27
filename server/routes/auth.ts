@@ -1,11 +1,11 @@
 import { Router, Request, Response, NextFunction  } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { db } from "../config/db"          // ваш mysql2-пул с promise
+import { db } from "../config/db"          
 import authenticate, { AuthRequest } from "../middleware/auth";
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || "replace_this_secret";
+const JWT_SECRET = process.env.JWT_SECRET || "54466fe70857e8e368a26a7a9dd81e7fac6c6ba32080b37bbdd2eb62f3129ab2";
 
 // --- Регистрация
 router.post(
