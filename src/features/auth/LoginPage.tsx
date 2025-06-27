@@ -13,7 +13,7 @@ import { Icon } from '@iconify/react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 
-const TOKEN_KEY = 'token'; // или 'auth_token', как у вас в apiClient
+const TOKEN_KEY = 'token'; 
 
 const LoginPage: React.FC = () => {
   const [email, setEmail]           = React.useState('');
@@ -39,10 +39,6 @@ const LoginPage: React.FC = () => {
     setIsLoading(true);
     try {
       await login(email, password /*, rememberMe если надо */);
-
-      // Если в сторе не сохраняют локально — можно использовать это:
-      // if (rememberMe) localStorage.setItem(TOKEN_KEY, yourToken);
-      // else sessionStorage.setItem(TOKEN_KEY, yourToken);
 
       // Навигация по роли из стора
       if (user?.role === 'admin') navigate('/admin');

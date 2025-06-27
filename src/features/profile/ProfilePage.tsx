@@ -16,16 +16,14 @@ import { useAuthStore } from '../../stores/authStore';
 
 const ProfilePage: React.FC = () => {
   const { user, updateProfile } = useAuthStore();
-
-  // Локальные состояния для полей
-  const [name, setName] = React.useState(user?.name || '');
-  const [phone, setPhone] = React.useState(user?.phone || '');
+  const [name, setName] = React.useState('');
+  const [phone, setPhone] = React.useState('');
   const [isEditing, setIsEditing] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
   const [error, setError] = React.useState('');
   const [success, setSuccess] = React.useState('');
 
-  // При изменении user сбрасываем локальные поля
+  // Заполняем поля при загрузке user
   React.useEffect(() => {
     if (user) {
       setName(user.name);
@@ -33,33 +31,28 @@ const ProfilePage: React.FC = () => {
     }
   }, [user]);
 
+  if (!user) return null; // или спиннер
+
+  let registeredDate = '—';
+  if (user.createdAt) {
+    registeredDate = new Date(user.createdAt).toLocaleDateString();
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
     setIsSaving(true);
-
     try {
-      // updateProfile должен принимать объект с полями для изменения
       await updateProfile({ name, phone });
       setSuccess('Профиль успешно обновлён');
       setIsEditing(false);
     } catch (err: any) {
-      setError(err.message || 'Ошибка при обновлении профиля');
+      setError(err.message || 'Ошибка при обновлении');
     } finally {
       setIsSaving(false);
     }
   };
-
-  if (!user) return null;
-
-  // Преобразуем createdAt в нужный формат
-  let registeredDate = '—';
-  try {
-    registeredDate = new Date(user.createdAt).toLocaleDateString();
-  } catch {
-    registeredDate = '—';
-  }
 
   return (
     <div className="page-container">
