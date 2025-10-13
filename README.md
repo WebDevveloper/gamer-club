@@ -1,54 +1,30 @@
-# React + TypeScript + Vite
+# Сайт компьтерного клуба
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Этот сайт находится в разработке.
 
-Currently, two official plugins are available:
+Информационная система учета, бронирования и оплаты мест в компьютерном клубе.
+Изначально была дипломной работой, но решил довести её до ума в качестве портфолио и чисто для себя.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+# Технологии
+1. Стандартный набор из HTML, CSS, JS
+2. React
+3. Vite
+4. HeroUI
+5. MySQL Workbench
+6. Node.js
+7. Express.js
 
-## Expanding the ESLint configuration
+# Причина выбора технологий разработки
+Данная информационная система была разработана при помощи современных технологий. Они являются достаточно свежими и актуальными, а также позволяют быстро разворачивать фронт и бэк.
+Модульность React и быстрая работа Vite позволяет удобно создавать компоненты и легко отслеживать где есть ошибки в коде.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+**Я знаю что React - библиотека, а Vite - фреймворк React. Тем не менее я решил выписать оба. Сама программа разворачивается на Vite, а не creacte-react-app.**
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+Серверная сторона была написана при помощи Express.js из-за его простоты и скорости развертывания сервера. По сути 3 файла и готово. Но у меня побольше файлов (спасибо модульность)
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+# Недоработки
+Эта система не закончена до конца и над ней ведутся работы. Если не забуду, то регулярные обновления этой репозитории будут. 
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+# Возможности
+Данная информационная система позволяет на данный момент создать аккаунт, забронировать компьютер на выбранное время и изменить информацию в профиле.
+Присутствует и админка, однако пока что она кривенькая и показывает скорее потенциал.
